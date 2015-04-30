@@ -1,0 +1,69 @@
+#viewport{
+    width: 100vh;
+    height: 100vh;
+    text-align: center;
+}
+
+#viewport textarea{
+    resize: none;
+}
+
+#content {
+    display: inline-block;
+    height: 75%;
+    position: absolute;
+    top: 20%;
+    left: 10%;
+    width: 80%;
+}
+
+#msgForm{
+    height: 100%;
+}
+
+div.indexTab{
+    margin-top: 20px;
+}
+
+.defInput{
+    height: 26px;
+}
+
+.marginLR2{
+    margin-left: 4px;
+    margin-right: 4px;
+}
+
+div.tokenfield.form-control{
+    height: auto;
+    border-radius: 4px 4px 0 0;
+}
+
+// ***********************************
+
+.tableDefault {
+    margin:0px;padding:0px;
+    width:100%;
+    border:1px solid #ffffff;
+    border-radius: 0px;
+}.tableDefault table{
+    border-collapse: collapse;
+    border-spacing: 0;
+    width:100%;
+    height:100%;
+    margin:0px;padding:0px;
+}.tableDefault tr:hover td{
+    background-color:#ffffff;
+}
+.tableDefault td{
+    vertical-align:middle;
+    background-color:#ffffff;
+    border:1px solid #ffffff;
+    border-width:0px 1px 1px 0px;
+    text-align:left;
+    padding:10px;
+    font-size:12px;
+    font-family:Arial;
+    font-weight:bold;
+    color:#000000;
+}
