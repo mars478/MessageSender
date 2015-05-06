@@ -1,14 +1,15 @@
 package com.imp.msender.entity;
 
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
+import java.util.Date;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.io.Serializable;
 import org.apache.commons.lang3.StringUtils;
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class Message {
+public class Message implements Serializable {
 
     public static final String INFO = "INFO";
     public static final String LOGOUT = "LOGOUT";
@@ -16,8 +17,8 @@ public class Message {
     public static List<String> MSG_TYPES = Arrays.asList(new String[]{INFO, LOGOUT, LOGOUT_WARNING});
 
     protected static long counter = 1;
-    protected long id = 0;
 
+    long id = 0;
     int repeats = 1;
     int interval = 15; // minutes
     String header = null;

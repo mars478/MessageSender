@@ -1,74 +1,20 @@
 /* global require */
 
-require.config({
-    baseUrl: 'resources/js/libs',
-    paths: {
-        jquery: 'jquery-1.11.2.min',
-        jqueryui: 'jquery-ui',
-        growl: 'jquery.growl',
-        inputmask: 'jquery.inputmask',
-        datetimepicker: 'jquery.datetimepicker',
-        scrollbar: 'perfect-scrollbar',
-        backbone: 'backbone-min',
-        bootstrap: 'bootstrap.min',
-        underscore: 'underscore-min',
-        tokenfield: 'bootstrap-tokenfield',
-        autosize: 'taResizer'
-    },
-    shim: {// Use shim for plugins that does not support ADM
-        "bootstrap": {
-            deps: ["jquery"],
-            exports: "$.fn.popover"
-        },
-        "growl": {
-            deps: ["jquery"],
-            exports: "$.fn.popover"
-        },
-        "scrollbar": {
-            deps: ["jquery"],
-            exports: "$.fn.popover"
-        },
-        "jqueryui": {
-            deps: ["jquery"],
-            exports: "$.fn.popover"
-        },
-        "inputmask": {
-            deps: ["jquery"],
-            exports: "$.fn.popover"
-        },
-        "datetimepicker": {
-            deps: ["jquery"],
-            exports: "$.fn.popover"
-        }
-    },
-    enforceDefine: true
-});
-require(["jquery", "underscore", "backbone", "autosize", "bootstrap", "growl", "datetimepicker", "jqueryui", "tokenfield"], function ($, _, Backbone, autosize) {
-    /* BB model */
-    var Message = Backbone.Model.extend({
-        url: function () {
-            var suffix = this.id ? ('/' + encodeURIComponent(this.id)) : '';
-            return 'message' + suffix;
-        },
-        defaults: {
-            repeats: 1,
-            interval: 15, // minutes
-            header: null,
-            body: null,
-            action: null,
-            startDate: null,
-            expireDate: null
-        }
-    });
-    /* BB collection */
-    var Messages = Backbone.Collection.extend({
-        model: Message,
-        url: "message"
-    });
+define([
+    "jquery",
+    "underscore",
+    "backbone",
+    "autosize",
+    "q",
+    "message",
+    "bootstrap",
+    "growl",
+    "datetimepicker",
+    "jqueryui",
+    "tokenfield"], function ($, _, Backbone, autosize, Q, msg) {
     /* BB view */
-    var IndexView = Backbone.View.extend({
+    var MessageView = Backbone.View.extend({
         el: $('#msgForm'),
-        server: null,
         templates: [
             _.template($('#msgListTpl').html()),
             _.template($('#newMsg').html()),
@@ -85,54 +31,94 @@ require(["jquery", "underscore", "backbone", "autosize", "bootstrap", "growl", "
                     var i = li.index(li.filter('.active'));
                     var template = v.templates[i]({messages: model.toJSON()});
                     v.$el.find('div.active').html(template);
-                    v.refreshServer();
+                    if ($('#serverInput:visible').size()) {
+                        v.refreshLink();
+                    } else if ($('textarea[type="taginput"]:visible').size()) {
+                        v.refreshServers();
+                    }
                     v.decorateFields();
-                    debugger;
                     v.server && $('textarea[type="taginput"][id^="server"]:visible').val(v.server).change();
                 }
             });
         },
         decorateFields: function () {
+            var v = this;
+            var tagInputDelimiter = "#;";
+
             _.each($('[type="datepicker"]:visible'), function (e) {
                 $(e).datetimepicker();
             });
             _.each($('textarea[type="taginput"]:visible'), function (e) {
-                $(e).tokenfield({'createTokensOnBlur': 'true', 'delimiter': ['#;']}); //'itemAdded': tChange, 'itemRemoved': tChange,
+                $(e).tokenfield({'createTokensOnBlur': 'true', 'delimiter': [tagInputDelimiter]}); //'itemAdded': tChange, 'itemRemoved': tChange,
             });
             _.each($('textarea:visible'), function (e) {
                 autosize($(e));
             });
+
+            _.each($('textarea.dropzone:visible').parent(), function (drop) {
+                drop.addEventListener('dragover', function (evt) {
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    evt.dataTransfer.dropEffect = 'copy';
+                }, false);
+                drop.addEventListener('drop', function (evt) {
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    var files = evt.dataTransfer.files;
+                    var reader = new FileReader();
+                    reader.onload = function (event) {
+                        var r = event.target.result.replace(new RegExp('\n', 'g'), tagInputDelimiter);
+                        $(drop).find('textarea[type="taginput"]:visible').text(r).change();
+                        v.setServers();
+                    };
+                    reader.readAsText(files[0]);
+                }, false);
+            });
         },
         events: {
-            'add': 'add',
             'click #navPanel li a': 'changeTab',
-            'change #serverInput': 'setServer',
-            'dblclick #serverInput': 'refreshServer'
+            'change #serverInput': 'setLink',
+            'dblclick #serverInput': 'refreshLink',
+            'click .add': 'add'
         },
-        setServer: function () {
-            var s = $('#serverInput');
-            $.post("server", {server: s.val()}, function (data) {
-                s.val(data);
-            }, "json");
+        setServers: function () {
+            var s = $('textarea[type="taginput"]:visible');
+            $.post("serverList", {servers: s.text()}, "json").success(function (a) {
+                var txt = _.map(a, function (a) {
+                    return a.url;
+                }).join('#;');
+                s.text(txt).change();
+            });
         },
-        refreshServer: function () {
+        refreshServers: function () {
+            $.post("serverList", {servers: 'refresh'}, "json").success(function (a) {
+                var txt = _.map(a, function (a) {
+                    return a.url;
+                }).join('#;');
+                $('textarea[type="taginput"]:visible').text(txt).change();
+            });
+        },
+        setLink: function () {
             var s = $('#serverInput');
-            var v = this;
-            $.post("server", {server: 'refresh'}, "json").success(function (a) {
-                a && (v.server = a);
+            $.post("link", {server: s.val()}, "json").success(function (a) {
                 s.val(a);
+            });
+        },
+        refreshLink: function () {
+            $.post("link", {server: 'refresh'}, "json").success(function (a) {
+                $('#serverInput').val(a);
             });
         },
         changeTab: function () {
             this.render();
         },
         initialize: function () {
-            this.model = new Messages();
+            this.model = new msg.Messages();
             this.render();
         },
         fillModel: function () {
             var ret = [];
-            var info = new Message();
+            var info = new msg.Message();
             var block = null;
             var inputs = this.$el.find('input[name]:visible');
             var textAreas = this.$el.find('textarea[name]:visible');
@@ -147,7 +133,7 @@ require(["jquery", "underscore", "backbone", "autosize", "bootstrap", "growl", "
                     }
                 }
                 if (name.indexOf('block.') === 0) {
-                    !block && (block = new Message());
+                    !block && (block = new msg.Message());
                     name = name.replace('block.', '');
                     block.set(name, value);
                 } else {
@@ -172,7 +158,7 @@ require(["jquery", "underscore", "backbone", "autosize", "bootstrap", "growl", "
                 v.render();
                 return;
             }
-            var m = this.fillModel();
+            var m = v.fillModel();
             _.each(m, function (el) {
                 el.save({servers: srv}, {
                     success: function (model, response) {
@@ -202,9 +188,13 @@ require(["jquery", "underscore", "backbone", "autosize", "bootstrap", "growl", "
             });
         }
     });
-    view = new IndexView();
+    mView = new MessageView();
 
     window.delMsg = function (id) {
-        view.remove(id);
+        mView.remove(id);
     };
-});
+
+    return mView;
+}
+);
+        

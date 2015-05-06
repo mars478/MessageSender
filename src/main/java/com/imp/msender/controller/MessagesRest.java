@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.io.Serializable;
 import com.imp.msender.bean.MessageBean;
+import com.imp.msender.bean.ServerBean;
 import com.imp.msender.entity.Message;
 import org.springframework.context.annotation.Scope;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,29 +16,33 @@ import org.springframework.web.bind.annotation.RequestMethod;
 
 @RestController
 @Scope("session")
-public class IndexRest implements Serializable {
+public class MessagesRest implements Serializable {
 
     @Autowired
-    MessageBean mBean;
+    MessageBean msg;
+    
+    @Autowired
+    ServerBean srv;
 
     @RequestMapping(value = "/message", method = RequestMethod.GET)
     public List<Message> readAll() {
-        return mBean.getAll();
+        return msg.getAll();
     }
 
     @RequestMapping(value = "/message/{id}", method = RequestMethod.GET)
     public Message read(@PathVariable Long id) {
-        return mBean.getById(id);
+        return msg.getById(id);
     }
 
     @RequestMapping(value = "/message", method = RequestMethod.POST)
     public Message create(@RequestBody MessageCreate mCreate) {
-        return mBean.add(mCreate.toMessage(), mCreate.getServers());
+        srv.setList(mCreate.servers);
+        return msg.add(mCreate.toMessage(), false);
     }
 
     @RequestMapping(value = "/message/{id}", method = RequestMethod.DELETE)
     public Message delete(@PathVariable Long id) {
-        return mBean.deleteById(id);
+        return msg.deleteById(id);
     }
 
     static class MessageCreate extends Message {

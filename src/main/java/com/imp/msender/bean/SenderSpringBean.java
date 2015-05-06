@@ -1,6 +1,7 @@
 package com.imp.msender.bean;
 
 import com.imp.msender.entity.Message;
+import com.imp.msender.entity.Server;
 import java.io.Serializable;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -11,7 +12,6 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Scope;
-import org.springframework.context.annotation.ScopedProxyMode;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -22,7 +22,7 @@ import org.springframework.web.client.RestTemplate;
 
 @Component
 @Scope("session")
-public class SenderSpringBean extends SenderAbstractBean  implements Serializable{
+public class SenderSpringBean extends SenderAbstractBean implements Serializable {
 
     RestTemplate rest;
     HttpEntity<String> request;
@@ -34,24 +34,11 @@ public class SenderSpringBean extends SenderAbstractBean  implements Serializabl
     }
 
     @Override
-    protected URI getBaseURI() {
-        try {
-            String a = StringUtils.defaultString(app);
-            if (StringUtils.isNotBlank(a) && !a.endsWith("/")) {
-                a = a + "/";
-            }
-            return new URI(domain + a + "rest/message/");
-        } catch (URISyntaxException ex) {
-            return null;
-        }
-    }
-
-    @Override
-    public void resetRestRole() {
+    public void resetRestRole(Server srv) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        if (StringUtils.isNotBlank(restUser) && StringUtils.isNotBlank(restPwd)) {
-            String plainCreds = restUser + ":" + restPwd;
+        if (StringUtils.isNotBlank(srv.getUsername()) && StringUtils.isNotBlank(srv.getPassword())) {
+            String plainCreds = srv.getUsername() + ":" + srv.getPassword();
             byte[] plainCredsBytes = plainCreds.getBytes();
             byte[] base64CredsBytes = Base64.encodeBase64(plainCredsBytes);
             String base64Creds = new String(base64CredsBytes);
@@ -61,27 +48,21 @@ public class SenderSpringBean extends SenderAbstractBean  implements Serializabl
     }
 
     @Override
-    public void setRestRole(String username, String password) {
-        this.restUser = username;
-        this.restPwd = password;
-    }
-
-    @Override
-    public List<Message> getAll() {
-        ResponseEntity<Message[]> response = rest.exchange(getBaseURI(), HttpMethod.GET, request, Message[].class);
+    public List<Message> getAll(Server srv) {
+        ResponseEntity<Message[]> response = rest.exchange(srv.getBaseURI(), HttpMethod.GET, request, Message[].class);
         Message[] forNow = response.getBody();
         return new ArrayList<>(Arrays.asList(forNow));
     }
 
     @Override
-    public Message add(Message msg) {
-        ResponseEntity<Message> response = rest.exchange(getBaseURI(), HttpMethod.POST, request, Message.class);
+    public Message add(Server srv, Message msg) {
+        ResponseEntity<Message> response = rest.exchange(srv.getBaseURI(), HttpMethod.POST, request, Message.class);
         return response.getBody();
     }
 
     @Override
-    public boolean delete(Long id) {
-        ResponseEntity<Message> response = rest.exchange(getBaseURI() + "/" + id, HttpMethod.DELETE, request, Message.class);
+    public boolean delete(Server srv, Long id) {
+        ResponseEntity<Message> response = rest.exchange(srv.getBaseURI() + "/" + id, HttpMethod.DELETE, request, Message.class);
         return response.getBody() != null;
     }
 

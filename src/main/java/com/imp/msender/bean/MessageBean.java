@@ -1,12 +1,12 @@
 package com.imp.msender.bean;
 
-import java.net.URL;
 import java.util.List;
 import java.util.ArrayList;
 import java.io.Serializable;
-import java.net.MalformedURLException;
 import com.imp.msender.entity.Message;
+import com.imp.msender.entity.Server;
 import com.imp.msender.entity.interfaces.RetListener;
+import java.util.Arrays;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.stereotype.Component;
@@ -20,45 +20,14 @@ public class MessageBean implements Serializable {
     @Autowired
     SenderJerseyBean sender;
 
+    @Autowired
+    ServerBean servers;
+
     List<Message> list = new ArrayList<>();
 
     public MessageBean() {
         super();
-    }
-
-    // ============= url string ===========
-    public String getUrl() {
-        String pwd = StringUtils.defaultString(sender.getRestPwd());
-        String usr = StringUtils.defaultString(sender.getRestUser());
-        String domain = StringUtils.defaultString(sender.getDomain());
-        String app = StringUtils.defaultString(sender.getApp());
-
-        String ret = domain + app;
-        if (StringUtils.isNotBlank(usr) && StringUtils.isNotBlank(pwd)) {
-            ret = ret.replace("://", "://" + pwd + ":" + usr + "@");
-        }
-        return ret;
-    }
-
-    public String setUrl(String url) {
-        try {
-            URL aURL = new URL(url);
-            int port = aURL.getPort();
-            String p = (port == -1) ? "" : (":" + port);
-            sender.setDomain(aURL.getProtocol() + "://" + aURL.getHost() + p);
-            sender.setApp(aURL.getPath());
-            String uInfo = aURL.getUserInfo();
-            if (StringUtils.isNotBlank(uInfo)) {
-                String[] t = uInfo.split(":");
-                sender.setRestUser(t[0]);
-                sender.setRestPwd(t[1]);
-            }
-            sender.resetRestRole();
-            refresh();
-            return getUrl();
-        } catch (MalformedURLException ex) {
-            return null;
-        }
+        System.out.println("message bean created");
     }
 
     // ========== messages service ================
@@ -115,16 +84,22 @@ public class MessageBean implements Serializable {
     }
 
     public Message updateById(final Long id, final Message msg) {
+        if (nullServer()) {
+            return null;
+        }
         deleteById(id);
-        return add(msg);
+        return add(msg, true);
     }
 
     public Message deleteById(final Long id) {
+        if (nullServer()) {
+            return null;
+        }
         int index = getIndex(id);
         if (index > -1) {
             synchronized (list) {
                 Message temp = list.get(index);
-                if (sender.delete(id)) {
+                if (sender.delete(curSrv(), id)) {
                     list.remove(index);
                     return temp;
                 }
@@ -133,11 +108,10 @@ public class MessageBean implements Serializable {
         return null;
     }
 
-    public Message add(Message msg) {
-        return add(msg, true);
-    }
-
-    public Message add(Message msg, boolean checkList) {
+    public Message add(Server srv, Message msg, boolean checkList) {
+        if (nullServer()) {
+            return null;
+        }
         if (!checkList || getIndex(msg.getId()) == -1) {
             synchronized (list) {
                 if (checkList) {
@@ -148,7 +122,7 @@ public class MessageBean implements Serializable {
                         }
                     }
                 }
-                if (sender.add(msg) != null) {
+                if (sender.add(srv, msg) != null) {
                     if (checkList) {
                         list.add(msg);
                     }
@@ -159,40 +133,62 @@ public class MessageBean implements Serializable {
         return null;
     }
 
-    public Message add(Message msg, List<String> servers) {
+    public Message add(Message msg, boolean curServer) {
         String exc = null;
-        if (servers != null && !servers.isEmpty()) {
-            try {
-                int errorCnt = 1;
-                for (String srv : servers) {
-                    if (setUrl(srv) == null) {
-                        exc = "Invalid url:" + srv;
-                        break;
+        try {
+            int errorCnt = 1;
+            List<Server> srvs = curServer ? Arrays.asList(curSrv()) : servers.getAll();
+            for (Server srv : srvs) {
+                if (add(srv, msg, false) == null) {
+                    if (exc == null) {
+                        exc = "Невозможно добавить сообщение:\n";
                     }
-                    if (add(msg, false) == null) {
-                        if (exc == null) {
-                            exc = "Невозможно добавить сообщение:\n";
-                        }
-                        exc = errorCnt++ + ") " + srv + "\n";
-                    }
+                    exc = errorCnt++ + ") " + srv + "\n";
                 }
-                return msg;
-            } catch (Exception e) {
-                exc = StringUtils.abbreviate(ExceptionUtils.getMessage(e), 200);
             }
+            return msg;
+        } catch (Exception e) {
+            exc = StringUtils.abbreviate(ExceptionUtils.getMessage(e), 200);
         }
         return StringUtils.isBlank(exc) ? null : new Message(0, 0, exc, null, null, null, null, null);
     }
 
     // ======== client sync =====================
     public void refresh() {
+        if (nullServer()) {
+            return;
+        }
         synchronized (list) {
             list.clear();
-            List temp = sender.getAll();
+            List temp = sender.getAll(curSrv());
             if (temp != null && !temp.isEmpty()) {
                 list.addAll(temp);
             }
         }
+    }
+
+    protected boolean nullServer() {
+        return curSrv() == null;
+    }
+
+    protected Server curSrv() {
+        return servers.getFirst();
+    }
+
+    public void setUrl(String server) {
+        if (!Server.verify(server)) {
+            return;
+        }
+
+        if (!nullServer()) {
+            servers.moveToTop(server);
+        } else {
+            servers.add(new Server(server));
+        }
+    }
+
+    public String getUrl() {
+        return nullServer() ? "" : curSrv().getUrl();
     }
 
 }

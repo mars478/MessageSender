@@ -67,3 +67,20 @@ div.tokenfield.form-control{
     font-weight:bold;
     color:#000000;
 }
+
+// ******************************************
+
+.status {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 5px;
+}
+
+span.status.ok {
+    background-color: green;
+}
+
+span.status.fail {
+    background-color: red;
+}
