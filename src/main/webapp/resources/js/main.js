@@ -17,7 +17,7 @@ require.config({
         tokenfield: 'libs/bootstrap-tokenfield',
         autosize: 'libs/taResizer',
         q: 'libs/q',
-        // =========== components ==========
+        // =========== components =========
         routerIndex: 'routers/index',
         message: 'models/message',
         server: 'models/server',
@@ -54,7 +54,14 @@ require.config({
 });
 
 require([// Load our app module and pass it to our definition function
-    'app',
-], function (App) {    // The "app" dependency is passed in as "App"
+    'app'
+], function (App) {
     App.initialize();
+
+    var stub = function (e) {
+        e.preventDefault();
+        return false;
+    };
+    document.body.ondragover = stub;
+    document.body.ondrop = stub;
 });

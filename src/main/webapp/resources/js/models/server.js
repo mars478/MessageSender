@@ -15,7 +15,7 @@ define([
             link: undefined,
             port: undefined,
             connected: false,
-            added: false
+            added: true
         }
     });
     /* BB collection */

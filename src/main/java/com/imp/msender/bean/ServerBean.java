@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Scope;
 
 @Component
 @Scope("session")
-public class ServerBean implements Serializable{
+public class ServerBean implements Serializable {
 
     List<Server> list;
 
@@ -62,13 +62,16 @@ public class ServerBean implements Serializable{
     public Server add(Server srv) {
         if (getIndex(srv.getId()) == -1) {
             synchronized (list) {
+                boolean eq = false;
                 for (Server m : list) {
                     if (m.getId() == srv.getId()) {
                         srv.setId(Server.getNewId());
-                        break;
+                    }
+                    if (m.eq(srv)) {
+                        eq = true;
                     }
                 }
-                if (srv.correct()) {
+                if (srv.correct() && !eq) {
                     list.add(0, srv);
                 }
                 return srv;
@@ -78,8 +81,30 @@ public class ServerBean implements Serializable{
     }
 
     public void setList(List<String> stringServers) {
+        List nList = convertList(stringServers);
+        synchronized (list) {
+            if (nList != null) {
+                list = nList;
+            } else {
+                list.clear();
+            }
+        }
+    }
+
+    public void addList(List<String> stringServers) {
+        List<Server> aList = convertList(stringServers);
+        synchronized (list) {
+            for (Server a : aList) {
+                if (!contains(a)) {
+                    add(a);
+                }
+            }
+        }
+    }
+
+    protected List<Server> convertList(List<String> stringServers) {
         if (stringServers == null || stringServers.isEmpty()) {
-            return;
+            return null;
         }
 
         Server srv = null;
@@ -90,10 +115,7 @@ public class ServerBean implements Serializable{
                 nList.add(srv);
             }
         }
-
-        synchronized (list) {
-            list = nList;
-        }
+        return nList;
     }
 
     public void moveToTop(String url) {
@@ -107,6 +129,21 @@ public class ServerBean implements Serializable{
                 }
             }
         }
+    }
+
+    /**
+     * not syncronized
+     *
+     * @param srv
+     * @return
+     */
+    protected boolean contains(Server srv) {
+        for (Server s : list) {
+            if (s.eq(srv)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // ========= service ================

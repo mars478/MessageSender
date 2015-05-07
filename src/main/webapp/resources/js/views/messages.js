@@ -55,25 +55,39 @@ define([
                 autosize($(e));
             });
 
-            _.each($('textarea.dropzone:visible').parent(), function (drop) {
-                drop.addEventListener('dragover', function (evt) {
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    evt.dataTransfer.dropEffect = 'copy';
-                }, false);
-                drop.addEventListener('drop', function (evt) {
-                    evt.stopPropagation();
-                    evt.preventDefault();
-                    var files = evt.dataTransfer.files;
-                    var reader = new FileReader();
-                    reader.onload = function (event) {
-                        var r = event.target.result.replace(new RegExp('\n', 'g'), tagInputDelimiter);
-                        $(drop).find('textarea[type="taginput"]:visible').text(r).change();
+            v.el.ondragover = function (evt) {
+                evt.stopPropagation();
+                evt.preventDefault();
+                evt.dataTransfer.dropEffect = 'copy';
+                return false;
+            };
+
+            v.el.ondrop = function (evt) {
+                evt.stopPropagation();
+                evt.preventDefault();
+
+                var results = [];
+                var files = evt.dataTransfer.files;
+                var size = files.length;
+                var fLoad = function () {
+                    if (!--size) {
+                        var r = results.join('\n');
+                        v.$el.find('textarea[type="taginput"]:visible').text(r).change();
                         v.setServers();
+                    }
+                };
+
+                $.each(files, function () {
+                    var reader = new FileReader();
+                    reader.onload = function (e) {
+                        var r = e.target.result.replace(new RegExp('\n', 'g'), "#;").replace(new RegExp(' ', 'g'), "#;").replace(new RegExp('\t', 'g'), "#;");
+                        results.push(r);
+                        fLoad();
                     };
-                    reader.readAsText(files[0]);
-                }, false);
-            });
+                    reader.onerror = fLoad;
+                    reader.readAsBinaryString(this);
+                });
+            };
         },
         events: {
             'click #navPanel li a': 'changeTab',
@@ -83,19 +97,13 @@ define([
         },
         setServers: function () {
             var s = $('textarea[type="taginput"]:visible');
-            $.post("serverList", {servers: s.text()}, "json").success(function (a) {
-                var txt = _.map(a, function (a) {
-                    return a.url;
-                }).join('#;');
-                s.text(txt).change();
+            $.post("addServerList", {servers: s.text()}, "json").success(function (a) {
+                s.text(a).change();
             });
         },
         refreshServers: function () {
-            $.post("serverList", {servers: 'refresh'}, "json").success(function (a) {
-                var txt = _.map(a, function (a) {
-                    return a.url;
-                }).join('#;');
-                $('textarea[type="taginput"]:visible').text(txt).change();
+            $.post("addServerList", {servers: 'refresh'}, "json").success(function (a) {
+                $('textarea[type="taginput"]:visible').text(a).change();
             });
         },
         setLink: function () {
@@ -195,6 +203,4 @@ define([
     };
 
     return mView;
-}
-);
-        
+});      

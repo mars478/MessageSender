@@ -195,19 +195,19 @@
                         <td>URL</td>
                         <td>Порт</td>
                         <td></td>
-                        <td></td>
+                        <td> <input type="button" value="++" class="newSrv" /></td>
                         </tr>
                         </thead>
                         <tbody>
                         <% _.each(servers,function(srv) { %>
                         <tr class="editableRow" cid="<%= srv.id %>">
-                        <td><%= srv.protocol %></td>
-                        <td><%= srv.username %></td>
-                        <td><%= srv.password %></td>
-                        <td><%= srv.link %></td>
-                        <td><%= srv.port %></td>
+                        <td name="protocol"><%= srv.protocol %></td>
+                        <td name="username"><%= srv.username %></td>
+                        <td name="password"><%= srv.password %></td>
+                        <td name="link"><%= srv.link %></td>
+                        <td name="port"><%= srv.port %></td>
                         <td><span class="status <%= srv.connected ? 'ok' : 'fail' %>" /></td>
-                        <td><input type="button" value="<%= srv.added ? 'x' : '+' %>" onclick="changeSrv( <%= srv.id %> )"  /></td>
+                        <td><input type="button" value="<%= srv.added ? 'X' : '+' %>" onclick="changeSrv( <%= srv.id %> )"  /></td>
                         </tr>
                         <% }); %>
                         </tbody>

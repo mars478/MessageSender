@@ -1,12 +1,13 @@
 package com.imp.msender.entity;
 
-import java.io.Serializable;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.util.regex.Matcher;
+import java.io.Serializable;
 import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+import java.net.MalformedURLException;
 import org.apache.commons.lang3.StringUtils;
+import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -20,7 +21,7 @@ public class Server implements Serializable {
     long id = -1;
     int port = -1;
     boolean connected = false;
-    boolean added = false;
+    boolean added = true;
     String protocol;
     String link;
     String username = "tomcat";
@@ -107,21 +108,26 @@ public class Server implements Serializable {
         this.id = id;
     }
 
+    @JsonIgnore
     public String getUrl() {
         String pwd = StringUtils.defaultString(password);
         String usr = StringUtils.defaultString(username);
         String lnk = StringUtils.defaultString(link);
         String ptcl = StringUtils.defaultString(protocol);
         String prt = port == -1 ? "" : (":" + port);
-        String ret = ptcl + "://" + lnk;
-        int dIndex = ret.indexOf("/", ret.indexOf("//") + 2);
-        ret = ret.substring(0, dIndex) + prt + ret.substring(dIndex);
-        if (StringUtils.isNotBlank(usr) && StringUtils.isNotBlank(pwd)) {
-            ret = ret.replace("://", "://" + usr + ":" + pwd + "@");
-        }
-        return ret;
+        
+        String url = ptcl + "://" + lnk;
+        int dIndex = url.indexOf("/", url.indexOf("//") + 2);
+        url = (dIndex > -1)
+                ? url.substring(0, dIndex) + prt + url.substring(dIndex)
+                : url + prt;
+
+        return (StringUtils.isNotBlank(usr) && StringUtils.isNotBlank(pwd))
+                ? url.replace("://", "://" + usr + ":" + pwd + "@")
+                : url;
     }
 
+    @JsonIgnore
     public final String setUrl(String url) {
         try {
             URL u = new URL(url);
@@ -141,10 +147,12 @@ public class Server implements Serializable {
         }
     }
 
+    @JsonIgnore
     public URI getBaseURI() {
         return getBaseURI(getUrl());
     }
 
+    @JsonIgnore
     protected URI getBaseURI(String base) {
         try {
             if (!base.endsWith("/")) {
@@ -158,6 +166,16 @@ public class Server implements Serializable {
 
     public boolean correct() {
         return port != ERROR_PORT_VAL && port != -1;
+    }
+
+    public boolean eq(Server s) {
+        return this.added == s.added
+                && this.connected == s.connected
+                && this.port == s.port
+                && StringUtils.equalsIgnoreCase(this.link, s.link)
+                && StringUtils.equalsIgnoreCase(this.password, s.password)
+                && StringUtils.equalsIgnoreCase(this.protocol, s.protocol)
+                && StringUtils.equalsIgnoreCase(this.username, s.username);
     }
 
     // ***************************************************************************************

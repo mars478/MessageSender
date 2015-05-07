@@ -84,3 +84,11 @@ span.status.ok {
 span.status.fail {
     background-color: red;
 }
+
+.rEditor{
+    border: 1px solid #ccc;
+    background: #eee;
+    font-size: small;
+    text-align: center;
+    font-weight: bold;
+}
